@@ -1,0 +1,1 @@
+UPDATE public.products SET collection_id = '4b632a11-2c4e-4133-b104-39951fd0191a' WHERE is_active = true AND is_sale = true;

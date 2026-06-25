@@ -1,0 +1,164 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  Outlet,
+  Link,
+  createRootRouteWithContext,
+  useRouter,
+  HeadContent,
+  Scripts,
+} from "@tanstack/react-router";
+import { useEffect, type ReactNode } from "react";
+
+import appCss from "../styles.css?url";
+import { reportLovableError } from "../lib/lovable-error-reporting";
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
+import { AnnouncementBar } from "@/components/AnnouncementBar";
+import { WhatsAppButton } from "@/components/WhatsAppButton";
+import { Toaster } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+
+function NotFoundComponent() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="max-w-md text-center">
+        <h1 className="text-7xl font-bold text-foreground">404</h1>
+        <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          The page you're looking for doesn't exist or has been moved.
+        </p>
+        <div className="mt-6">
+          <Link
+            to="/"
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            Go home
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+  console.error(error);
+  const router = useRouter();
+  useEffect(() => {
+    reportLovableError(error, { boundary: "tanstack_root_error_component" });
+  }, [error]);
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="max-w-md text-center">
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">
+          This page didn't load
+        </h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Something went wrong on our end. You can try refreshing or head back home.
+        </p>
+        <div className="mt-6 flex flex-wrap justify-center gap-2">
+          <button
+            onClick={() => {
+              router.invalidate();
+              reset();
+            }}
+            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            Try again
+          </button>
+          <a
+            href="/"
+            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+          >
+            Go home
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+  head: () => ({
+    meta: [
+      { charSet: "utf-8" },
+      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { title: "Dénvie by Denise — Comfortable and Luxurious Style" },
+      {
+        name: "description",
+        content:
+          "Luxury Lebanese women's fashion. Curated, comfortable, and effortlessly elegant pieces delivered all over Lebanon.",
+      },
+      { name: "author", content: "Dénvie by Denise" },
+      { property: "og:title", content: "Dénvie by Denise — Comfortable and Luxurious Style" },
+      {
+        property: "og:description",
+        content: "Comfortable and Luxurious Style — delivered all over Lebanon.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+      { name: "twitter:site", content: "@denvie_lb" },
+      { name: "twitter:title", content: "Dénvie by Denise — Comfortable and Luxurious Style" },
+      { name: "description", content: "A premium e-commerce website for Dénvie by Denise, offering a luxurious online shopping experience for women's fashion." },
+      { property: "og:description", content: "A premium e-commerce website for Dénvie by Denise, offering a luxurious online shopping experience for women's fashion." },
+      { name: "twitter:description", content: "A premium e-commerce website for Dénvie by Denise, offering a luxurious online shopping experience for women's fashion." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/0eb91d7f-f18e-4530-8221-079e78d63645/id-preview-ceb0037f--a0e04e61-71b7-4c21-ba92-a74637ca1438.lovable.app-1780447734272.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/0eb91d7f-f18e-4530-8221-079e78d63645/id-preview-ceb0037f--a0e04e61-71b7-4c21-ba92-a74637ca1438.lovable.app-1780447734272.png" },
+    ],
+    links: [
+      {
+        rel: "stylesheet",
+        href: appCss,
+      },
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Tenor+Sans&family=Instrument+Sans:ital,wght@0,400..600;1,400..600&display=swap",
+      },
+    ],
+  }),
+  shellComponent: RootShell,
+  component: RootComponent,
+  notFoundComponent: NotFoundComponent,
+  errorComponent: ErrorComponent,
+});
+
+function RootShell({ children }: { children: ReactNode }) {
+  return (
+    <html lang="en">
+      <head>
+        <HeadContent />
+      </head>
+      <body>
+        {children}
+        <Scripts />
+      </body>
+    </html>
+  );
+}
+
+function RootComponent() {
+  const { queryClient } = Route.useRouteContext();
+  const router = useRouter();
+
+  useEffect(() => {
+    const { data: sub } = supabase.auth.onAuthStateChange(() => {
+      router.invalidate();
+    });
+    return () => sub.subscription.unsubscribe();
+  }, [router]);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AnnouncementBar />
+      <Header />
+      <main className="min-h-[60vh]">
+        <Outlet />
+      </main>
+      <Footer />
+      <WhatsAppButton />
+      <Toaster position="top-center" />
+    </QueryClientProvider>
+  );
+}
