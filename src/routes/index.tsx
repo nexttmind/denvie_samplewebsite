@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { getBestsellers, getTestimonials } from "@/lib/catalog";
 import { ProductCard, type ProductCardData } from "@/components/ProductCard";
 import heroModel from "@/assets/hero-quiet-luxury.jpg";
 import silks from "@/assets/collection-essentials.jpg";
@@ -29,27 +29,12 @@ export const Route = createFileRoute("/")({
 function Home() {
   const { data: products = [] } = useQuery({
     queryKey: ["home-bestsellers"],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("products")
-        .select("id,slug,name,price,compare_at_price,images,is_new,is_sale,sizes,colors,is_bestseller")
-        .eq("is_active", true)
-        .eq("is_bestseller", true)
-        .limit(4);
-      return (data ?? []) as ProductCardData[];
-    },
+    queryFn: () => getBestsellers(4) as ProductCardData[],
   });
 
   const { data: testimonials = [] } = useQuery({
     queryKey: ["home-testimonials"],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("testimonials")
-        .select("id,author,location,quote,rating")
-        .eq("is_active", true)
-        .order("sort_order");
-      return data ?? [];
-    },
+    queryFn: getTestimonials,
   });
 
   const featured = [
@@ -365,13 +350,9 @@ function NewsletterForm() {
         const fd = new FormData(e.currentTarget);
         const email = String(fd.get("email") ?? "");
         if (!email) return;
-        const { error } = await supabase.from("newsletter_subscribers").insert({ email });
         const { toast } = await import("sonner");
-        if (error) toast.error("Could not subscribe. Try again.");
-        else {
-          toast.success("Welcome to the Inner Circle.");
-          (e.target as HTMLFormElement).reset();
-        }
+        toast.success("Welcome to the Inner Circle.");
+        (e.target as HTMLFormElement).reset();
       }}
       className="flex flex-col sm:flex-row gap-0 ring-1 ring-black/5"
     >

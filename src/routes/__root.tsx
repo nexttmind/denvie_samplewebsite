@@ -16,7 +16,6 @@ import { Footer } from "@/components/Footer";
 import { AnnouncementBar } from "@/components/AnnouncementBar";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { Toaster } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 
 function NotFoundComponent() {
   return (
@@ -140,14 +139,6 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-  const router = useRouter();
-
-  useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange(() => {
-      router.invalidate();
-    });
-    return () => sub.subscription.unsubscribe();
-  }, [router]);
 
   return (
     <QueryClientProvider client={queryClient}>

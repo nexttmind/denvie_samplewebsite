@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useMemo } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { getActiveProducts, getCategories } from "@/lib/catalog";
 import { ProductCard, type ProductCardData } from "@/components/ProductCard";
 
 export const Route = createFileRoute("/shop")({
@@ -25,16 +25,12 @@ function Shop() {
 
   const { data: categories = [] } = useQuery({
     queryKey: ["categories"],
-    queryFn: async () => (await supabase.from("categories").select("id,slug,name").order("sort_order")).data ?? [],
+    queryFn: getCategories,
   });
 
   const { data: products = [] } = useQuery({
     queryKey: ["all-products"],
-    queryFn: async () =>
-      ((await supabase
-        .from("products")
-        .select("id,slug,name,price,compare_at_price,images,is_new,is_sale,sizes,colors,category_id,created_at")
-        .eq("is_active", true)).data ?? []) as (ProductCardData & { category_id: string; created_at: string })[],
+    queryFn: () => getActiveProducts(),
   });
 
   const filtered = useMemo(() => {

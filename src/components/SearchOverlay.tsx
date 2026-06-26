@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Search, X } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { getActiveProducts, getCategories } from "@/lib/catalog";
 import { resolveImage } from "@/lib/product-images";
 
 type SearchProduct = {
@@ -22,20 +22,13 @@ export function SearchOverlay({ open, onClose }: { open: boolean; onClose: () =>
 
   const { data: products = [] } = useQuery({
     queryKey: ["search-products"],
-    queryFn: async () =>
-      ((
-        await supabase
-          .from("products")
-          .select("id,slug,name,price,images,colors,category_id")
-          .eq("is_active", true)
-      ).data ?? []) as SearchProduct[],
+    queryFn: () => getActiveProducts(),
     enabled: open,
   });
 
   const { data: categories = [] } = useQuery({
     queryKey: ["search-categories"],
-    queryFn: async () =>
-      (await supabase.from("categories").select("id,slug,name").order("sort_order")).data ?? [],
+    queryFn: getCategories,
     enabled: open,
   });
 

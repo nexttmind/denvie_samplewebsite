@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { getCollectionBySlug } from "@/lib/catalog";
 import { ProductCard, type ProductCardData } from "@/components/ProductCard";
 import { ArrowRight } from "lucide-react";
 
@@ -29,19 +29,10 @@ function CollectionPage() {
   const { slug } = Route.useParams();
   const { data, isLoading } = useQuery({
     queryKey: ["collection", slug],
-    queryFn: async () => {
-      const { data: col } = await supabase
-        .from("collections")
-        .select("id,name,description,banner_url")
-        .eq("slug", slug)
-        .maybeSingle();
-      if (!col) return { col: null, products: [] as ProductCardData[], count: 0 };
-      const { data: products } = await supabase
-        .from("products")
-        .select("id,slug,name,price,compare_at_price,images,is_new,is_sale,sizes,colors")
-        .eq("is_active", true)
-        .eq("collection_id", col.id);
-      return { col, products: (products ?? []) as ProductCardData[], count: products?.length ?? 0 };
+    queryFn: () => {
+      const result = getCollectionBySlug(slug);
+      if (!result) return { col: null, products: [] as ProductCardData[], count: 0 };
+      return { col: result.col, products: result.products, count: result.count };
     },
   });
 

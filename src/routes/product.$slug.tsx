@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { getProductBySlug, getRelatedProducts } from "@/lib/catalog";
 import { resolveImages } from "@/lib/product-images";
 import { useCart, useWishlist } from "@/hooks/useCart";
 import { BRAND, whatsappLink } from "@/lib/brand";
@@ -18,25 +18,15 @@ function ProductPage() {
   const { add } = useCart();
   const { has, toggle } = useWishlist();
 
-  const { data: product } = useQuery({
+  const { data: product, isLoading } = useQuery({
     queryKey: ["product", slug],
-    queryFn: async () =>
-      (await supabase.from("products").select("*").eq("slug", slug).maybeSingle()).data,
+    queryFn: () => getProductBySlug(slug),
   });
 
   const { data: related = [] } = useQuery({
     queryKey: ["related", product?.category_id, product?.id],
     enabled: !!product,
-    queryFn: async () => {
-      let q = supabase
-        .from("products")
-        .select("id,slug,name,price,compare_at_price,images,is_new,is_sale,sizes,colors")
-        .eq("is_active", true)
-        .neq("id", product!.id)
-        .limit(8);
-      if (product!.category_id) q = q.eq("category_id", product!.category_id);
-      return ((await q).data ?? []) as ProductCardData[];
-    },
+    queryFn: () => getRelatedProducts(product!),
   });
 
   const [activeImg, setActiveImg] = useState(0);
@@ -44,8 +34,12 @@ function ProductPage() {
   const [color, setColor] = useState<string | undefined>();
   const [qty, setQty] = useState(1);
 
-  if (!product) {
+  if (isLoading) {
     return <section className="max-w-3xl mx-auto px-6 py-24 text-center text-sm">Loading…</section>;
+  }
+
+  if (!product) {
+    return <section className="max-w-3xl mx-auto px-6 py-24 text-center text-sm">Product not found.</section>;
   }
 
   const images = resolveImages(product.images);

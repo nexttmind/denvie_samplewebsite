@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { getCollections } from "@/lib/catalog";
 import silks from "@/assets/collection-essentials.jpg";
 import tailoring from "@/assets/collection-tailored.jpg";
 import knits from "@/assets/collection-resort.jpg";
@@ -14,25 +14,7 @@ const FALLBACK_IMAGES = [silks, tailoring, knits];
 function CollectionsIndex() {
   const { data: collections = [] } = useQuery({
     queryKey: ["collections"],
-    queryFn: async () => {
-      const { data: cols } = await supabase
-        .from("collections")
-        .select("id,slug,name,description,banner_url")
-        .order("sort_order");
-      if (!cols?.length) return [];
-      const counts = await Promise.all(
-        cols.map(async (c) => {
-          const { count } = await supabase
-            .from("products")
-            .select("id", { count: "exact", head: true })
-            .eq("is_active", true)
-            .eq("collection_id", c.id);
-          return { id: c.id, count: count ?? 0 };
-        }),
-      );
-      const map = Object.fromEntries(counts.map((c) => [c.id, c.count]));
-      return cols.map((c) => ({ ...c, productCount: map[c.id] ?? 0 }));
-    },
+    queryFn: getCollections,
   });
 
   return (

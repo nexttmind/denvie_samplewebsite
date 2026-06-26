@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useCart } from "@/hooks/useCart";
-import { supabase } from "@/integrations/supabase/client";
+import { BRAND, whatsappLink } from "@/lib/brand";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/checkout")({
@@ -16,62 +16,52 @@ function Checkout() {
   const shipping = subtotal > 0 ? 5 : 0;
   const total = subtotal + shipping;
 
-  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (items.length === 0) {
       toast.error("Your cart is empty");
       return;
     }
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData.user) {
-      toast.error("Please sign in to complete checkout");
-      navigate({ to: "/auth" });
-      return;
-    }
     setSubmitting(true);
     const fd = new FormData(e.currentTarget);
-    const { data: order, error } = await supabase
-      .from("orders")
-      .insert({
-        user_id: userData.user.id,
-        customer_name: String(fd.get("name")),
-        customer_email: String(fd.get("email") ?? userData.user.email ?? ""),
-        customer_phone: String(fd.get("phone")),
-        shipping_address: String(fd.get("address")),
-        shipping_city: String(fd.get("city")),
-        shipping_region: String(fd.get("region") ?? ""),
-        payment_method: "cod",
-        subtotal,
-        shipping_fee: shipping,
-        total,
-        notes: String(fd.get("notes") ?? ""),
-      })
-      .select()
-      .single();
+    const name = String(fd.get("name"));
+    const phone = String(fd.get("phone"));
+    const email = String(fd.get("email") ?? "");
+    const address = String(fd.get("address"));
+    const city = String(fd.get("city"));
+    const region = String(fd.get("region") ?? "");
+    const notes = String(fd.get("notes") ?? "");
 
-    if (error || !order) {
-      toast.error("Could not place order");
-      setSubmitting(false);
-      return;
-    }
-
-    await supabase.from("order_items").insert(
-      items.map((it) => ({
-        order_id: order.id,
-        product_id: it.productId,
-        product_name: it.name,
-        product_image: it.image,
-        size: it.size,
-        color: it.color,
-        quantity: it.quantity,
-        unit_price: it.price,
-        line_total: it.price * it.quantity,
-      })),
+    const lines = items.map(
+      (it) =>
+        `• ${it.name}${it.size ? ` (${it.size})` : ""}${it.color ? ` — ${it.color}` : ""} × ${it.quantity} — $${(it.price * it.quantity).toFixed(2)}`,
     );
 
+    const message = [
+      `Hello ${BRAND.fullName}, I'd like to place an order:`,
+      "",
+      `Name: ${name}`,
+      `Phone: ${phone}`,
+      email ? `Email: ${email}` : "",
+      `Address: ${address}, ${city}${region ? `, ${region}` : ""}`,
+      notes ? `Notes: ${notes}` : "",
+      "",
+      "Items:",
+      ...lines,
+      "",
+      `Subtotal: $${subtotal.toFixed(2)}`,
+      `Shipping: $${shipping.toFixed(2)}`,
+      `Total: $${total.toFixed(2)}`,
+      "Payment: Cash on delivery",
+    ]
+      .filter(Boolean)
+      .join("\n");
+
     clear();
-    toast.success(`Order ${order.order_number} placed!`);
-    navigate({ to: "/account" });
+    toast.success("Opening WhatsApp to complete your order");
+    window.open(whatsappLink(message), "_blank", "noopener,noreferrer");
+    navigate({ to: "/" });
+    setSubmitting(false);
   };
 
   return (
@@ -93,11 +83,11 @@ function Checkout() {
           <h2 className="font-display text-xl pt-6">Payment</h2>
           <div className="bg-brand-beige/40 p-4 text-sm">
             <p className="font-medium mb-1">Cash on Delivery</p>
-            <p className="text-xs text-brand-charcoal/60">Pay when your order arrives. Online payments coming soon.</p>
+            <p className="text-xs text-brand-charcoal/60">Your order is sent via WhatsApp. Pay when your order arrives.</p>
           </div>
 
           <button disabled={submitting} className="w-full bg-brand-charcoal text-white py-4 text-xs uppercase tracking-luxe hover:bg-brand-rose transition-colors disabled:opacity-50">
-            {submitting ? "Placing order…" : "Place Order"}
+            {submitting ? "Opening WhatsApp…" : "Complete Order on WhatsApp"}
           </button>
         </form>
 

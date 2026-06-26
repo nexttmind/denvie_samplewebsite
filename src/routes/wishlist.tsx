@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useWishlist } from "@/hooks/useCart";
-import { supabase } from "@/integrations/supabase/client";
+import { getProductsByIds } from "@/lib/catalog";
 import { ProductCard, type ProductCardData } from "@/components/ProductCard";
 
 export const Route = createFileRoute("/wishlist")({
@@ -12,14 +12,7 @@ function Wishlist() {
   const { ids } = useWishlist();
   const { data: products = [] } = useQuery({
     queryKey: ["wishlist", ids],
-    queryFn: async () => {
-      if (ids.length === 0) return [] as ProductCardData[];
-      const { data } = await supabase
-        .from("products")
-        .select("id,slug,name,price,compare_at_price,images,is_new,is_sale,sizes,colors")
-        .in("id", ids);
-      return (data ?? []) as ProductCardData[];
-    },
+    queryFn: () => getProductsByIds(ids),
   });
 
   return (
